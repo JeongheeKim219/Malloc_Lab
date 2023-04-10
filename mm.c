@@ -96,9 +96,16 @@ void *mm_malloc(size_t size)
 
 /*
  * mm_free - Freeing a block does nothing.
+ * 블럭 해제: 더 이상 데이터를 담지 않는 블럭들을 비할당 상태로 만든다.
  */
 void mm_free(void *ptr)
 {
+    size_t size = GET_SIZE(HDRP(bp));
+
+    PUT(HDRP(bp), PACK(size, 0));
+    PUT(FTRP(bp), PACK(size, 0));
+
+    coalesce(bp);
 }
 
 
