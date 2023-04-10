@@ -4,7 +4,7 @@
  * In this naive approach, a block is allocated by simply incrementing
  * the brk pointer.  A block is pure payload. There are no headers or
  * footers.  Blocks are never coalesced or reused. Realloc is
- * implemented directly using mm_malloc and mm_free.
+ * implemented directly using mm_malloc and mm_free.(수정필요)
  *
  * NOTE TO STUDENTS: Replace this header comment with your own header
  * comment that gives a high level description of your solution.
@@ -50,8 +50,8 @@ team_t team = {
 #define PUT(p, val) (*(insigned int *)(p) = (val))
 
 /* Read the size and allocated fields from address p */
-#define GET_SIZE(p) *(GET(p) & ~0x7)
-#define GET_ALLOC(p) *(GET(p) & 0x1)
+#define GET_SIZE(p) (GET(p) & ~0x7)
+#define GET_ALLOC(p) (GET(p) & 0x1)
 
 /* Given block ptr bp, compute address of its header and footer */
 #define HDRP(bp) ((char *)(bp) - WSIZE)
@@ -100,6 +100,67 @@ void *mm_malloc(size_t size)
 void mm_free(void *ptr)
 {
 }
+
+
+/*
+ * mm_coalesce - Determines if the previous and next blocks are allocated.
+ * Depending on the cases, the current block may be coalesced.
+ * 블럭 병합: 현재 블럭의 앞뒤 블럭이 가용상태(free)인지 확인하고 병합 가능한 경우 두 블럭을 병합한다.
+ * 1) 앞뒤 블럭 모두 할당된 경우(앞뒤 블럭 모두 가용 상태가 아닌 경우)
+ * 2) 뒤의 블럭만 가용한 경우
+ * 3) 앞의 블럭만 가용한 경우
+ * 4) 앞뒤 블럭 모두 가용할 경우(앞뒤 블럭 모두 할당되지 않은 경우)
+ */
+void *coalesce(void *bp)
+{
+    size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); // 현재 블럭의 바로 앞 블럭이 병합가능한가를 확인
+    size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); // 현재 블럭의 바로 뒤 블럭이 병합가능한가를 확인
+    size_t size = GET_SIZE(HDRP(bp));
+
+    /*
+     * 1) 앞뒤 블럭 모두 이미 할당된 경우 
+     */
+    if (prev_alloc && next_alloc) // (!0 && !0)
+    {
+        return bp;
+    }
+    
+    /*
+     * 2) 뒤의 블럭만 가용한 경우
+     */
+    else if (prev_alloc && !next_alloc) // (1 && !0)
+    {
+        size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
+        PUT(HDRP(bp), PACK(size, 0));
+        PUT(FTRP(bp), PACK(size, 0));
+    }
+
+    /*
+     * 3) 앞의 블럭만 가용한 경우
+     */
+    else if (!prev_alloc && next_alloc) // (!0 && 1)
+    {
+        size += GET_SIZE(FTRP(PREV_BLKP(bp)));
+        PUT(HDRP(bp), PACK(size, 0));
+        PUT(FTRP(bp), PACK(size, 0));
+        bp = PREV_BLKP(bp);
+    } 
+    
+    /*
+     * 4) 앞뒤 블럭 모두 가용할 경우
+     */
+    else // (1 && 1)
+    {
+        size += GET_SIZE(HDRP(NEXT_BLKP(bp))) + GET_SIZE(FTRP(PREV_BLKP(bp)));
+        PUT(HDRP(bp), PACK(size, 0));
+        PUT(FTRP(bp), PACK(size, 0));
+        bp = PREV_BLKP(bp);
+    }
+
+    return bp;
+
+}
+
 
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
