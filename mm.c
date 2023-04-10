@@ -35,6 +35,34 @@ team_t team = {
     "bgShin@jungle.com"
 };
 
+// Basic constants and macros for manipulating the free list.
+// 가용 블럭 리스트를 활용하기 위한 기본적인 상수와 매크로 함수 정의
+
+#define WSIZE 4 /* Word and header/footer size (bytes) */
+#define DSIZE 8 /* Double word size (bytes) */
+#define CHUCKSIZE (1<<12) /* Extend heap by this amount (bytes) */
+
+#define MAX(x, y) ((x) > (y)? (x) : (y))
+
+/* Pack a size and allocated bit into a word */
+#define PACK(size, alloc) ((size) | (alloc))
+
+/* Read and write a word at address p */
+#define GET(p) (*(insigned int *) (p))
+#define PUT(p, val) (*(insigned int *) (p) = (val))
+
+/* Read the size and allocated fields from address p */
+#define GET_SIZE(p) *(GET(p) & ~0x7)
+#define GET_ALLOC(p) *(GET(p) & 0x1)
+
+/* Given block ptr bp, compute address of its header and footer */
+#define HDRP(bp) ((char *)(bp) - WSIZE)
+#define FTRP(bp) ((char *)(bp) + GET_SIZE(HDRP(bp) - DSIZE))
+
+/* Given block ptr bp, compute address of next and previous blocks */
+#define NEXT_BLKP(bp) ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)))
+#define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
+
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
 
